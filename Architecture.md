@@ -1,4 +1,4 @@
-*Detail Lapisan Utama (Architecture Layers)*
+# Detail Lapisan Utama (Architecture Layers)
 
 Presentation Layer
 
@@ -36,7 +36,8 @@ Komponen: url_launcher
 
 Fungsi: Menghubungkan pengguna langsung ke aplikasi WhatsApp pemilik laporan dengan template pesan otomatis.
 
-Struktur Dokumen Database (items Collection)
+# Struktur Dokumen Database (items Collection)
+
 id (String / Auto-ID): Identifier unik untuk setiap dokumen laporan.
 userId (String): UID unik pengguna pembuat laporan (diambil dari Firebase Auth).
 title (String): Judul/nama barang yang dilaporkan.
