@@ -1,55 +1,133 @@
-# Detail Lapisan Utama (Architecture Layers)
+# Architecture.md: Build a Flutter & Firebase Mobile Application named **LoFo (Lost & Found)**.
 
-Presentation Layer
+Purpose:
+Help users easily report, search, and manage lost or found items in real-time. The application collects item reports with images, stores them in Cloud Firestore, and allows direct user contact via WhatsApp launcher.
 
-Komponen: Flutter UI / Material 3
+Use this stack:
 
-Fungsi: Menangani antarmuka visual, tema warna terracotta, form input, dan komponen interaktif pengguna.
+* Frontend: Flutter (Dart) + Material 3 UI
+* Backend Services: Firebase Authentication, Cloud Firestore, Firebase Storage
+* External Integration: url_launcher (WhatsApp Integration)
+* Media Package: image_picker
 
-State & Logic Layer
+Code rules:
 
-Komponen: Dart / StreamBuilder
+* Do not add comments unless truly necessary.
+* Use PascalCase for Widget classes, Screen names, Models, and Enums.
+* Local variables and fields may use camelCase.
+* Keep UI components modular and isolated inside the widgets directory.
+* Use a clean and simple Flutter folder structure.
+* Use StreamBuilder for real-time database updates on the main feed.
 
-Fungsi: Mengelola state aplikasi secara real-time, validasi data, serta pemrosesan search & sorting di memori HP.
+Main entities:
 
-Authentication Layer
+1. User
 
-Komponen: Firebase Auth
+* Uid
+* Email
+* DisplayName
+* CreatedAt
 
-Fungsi: Mengelola pendaftaran akun, verifikasi email/password, dan mengamankan token sesi login pengguna.
+2. Item
 
-Database Layer
+* Id
+* UserId
+* Title
+* Type ('Hilang' | 'Ditemukan')
+* Description
+* Location
+* PhoneNumber
+* ImageUrl
+* CreatedAt
 
-Komponen: Cloud Firestore
+Database rules:
 
-Fungsi: Penyimpanan data NoSQL terstruktur (real-time database) untuk menyimpan kueri dokumen barang.
+* All item reports are stored in the `items` collection in Cloud Firestore.
+* Real-time query streams must order items by `createdAt` in descending order by default.
+* Item images must be uploaded to Firebase Storage under `items/{userId}_{timestamp}.jpg` before creating a document.
+* Deleting an item report must delete both its Firestore document and associated image in Firebase Storage.
+* Users can only edit or delete item documents where `userId` matches their authenticated UID.
 
-Media Storage Layer
+Backend & Firebase features:
 
-Komponen: Firebase Storage
+1. Authentication Service
 
-Fungsi: Menyimpan file foto barang secara terkompresi dan menyediakan tautan URL publik HTTPS.
+* Email & Password registration and login.
+* Auth state listener to persist login sessions automatically.
 
-Integration Layer
+2. Item CRUD Operations
 
-Komponen: url_launcher
+* Create: Upload image to Firebase Storage, then write item details to Firestore.
+* Read: Stream list of reports in real-time for feed display.
+* Update: Edit details of existing reports owned by current user.
+* Delete: Remove document and image binaries.
 
-Fungsi: Menghubungkan pengguna langsung ke aplikasi WhatsApp pemilik laporan dengan template pesan otomatis.
+3. Search & Filter Engine
 
-# Struktur Dokumen Database (items Collection)
+* Search by item title directly in memory / Firestore stream.
+* Filter reports by type: 'Semua', 'Hilang', or 'Ditemukan'.
+* Sort reports by date: 'Terbaru' (Newest) and 'Terlama' (Oldest).
 
-id (String / Auto-ID): Identifier unik untuk setiap dokumen laporan.
-userId (String): UID unik pengguna pembuat laporan (diambil dari Firebase Auth).
-title (String): Judul/nama barang yang dilaporkan.
-type (String): Status jenis laporan ('Hilang' atau 'Ditemukan').
-description (String): Detail penjelasan fisik atau kronologi barang.
-location (String): Lokasi ditemukannya atau hilangnya barang.
-phoneNumber (String): Nomor telepon/WA penanggung jawab laporan.
-imageUrl (String): Public URL lokasi gambar di Firebase Storage.
-createdAt (Timestamp): Penanda waktu pembuatan laporan untuk urutan feed.
-Alur Aliran Data Utama (Data Flow)
-Lapor Barang Baru (Create): Pengguna input data & foto $\rightarrow$ ImagePicker ambil gambar $\rightarrow$ Upload gambar ke Firebase Storage $\rightarrow$ Storage kirim balik imageUrl $\rightarrow$ Simpan seluruh objek data ke Cloud Firestore.
-Menerima Feed Barang (Read): Cloud Firestore menyalurkan aliran data (stream) $\rightarrow$ StreamBuilder di HomeScreen menangkap data $\rightarrow$ Dart melakukan filtering teks & pengurutan waktu $\rightarrow$ UI memperbarui tampilan secara otomatis (real-time).
+4. External WhatsApp Launcher
 
+* Launch WhatsApp chat directly using `url_launcher` with pre-filled message template.
 
+Frontend pages & widgets:
 
+1. LoginScreen & RegisterScreen
+
+* Authentication forms with input validation.
+* Header branding featuring the custom `LofoLogo` widget.
+
+2. HomeScreen (Dashboard Feed)
+
+* Real-time item feed list using `StreamBuilder`.
+* Top search bar and category filter action buttons.
+* Floating Action Button (FAB) to add a new report.
+
+3. AddItemScreen
+
+* Image picker field with interactive preview.
+* Input fields for Title, Type toggle ('Hilang'/'Ditemukan'), Location, Phone Number, and Description.
+* Upload indicator on submission.
+
+4. Custom Components
+
+* `LofoLogo`: Custom composite widget combining location pin and magnifying glass graphics.
+* `ItemCard`: Feed item card displaying image preview, status badge, title, location, timestamp, and contact action button.
+* `FilterBottomSheet`: Bottom sheet dialog for category filtering and sorting.
+
+UI requirements:
+
+* Use Indonesian language for all UI text, labels, buttons, dialogs, and validation messages.
+* Theme aesthetics: Terracotta / Warm Earthy palette (`#C85A32`) with clean light backgrounds.
+* Status badge colors:
+  * Hilang: Terracotta / Dark Red
+  * Ditemukan: Forest Green
+* Responsive Material 3 cards, bottom sheets, and confirmation dialogs before item deletion.
+
+Project structure:
+
+```text
+lofo_app/
+assets/
+  images/
+lib/
+  firebase_options.dart
+  main.dart
+  models/
+    item_model.dart
+    user_model.dart
+  screens/
+    add_item_screen.dart
+    home_screen.dart
+    login_screen.dart
+    register_screen.dart
+  services/
+    auth_service.dart
+    firestore_service.dart
+  widgets/
+    filter_bottom_sheet.dart
+    item_card.dart
+    lofo_logo.dart
+pubspec.yaml
