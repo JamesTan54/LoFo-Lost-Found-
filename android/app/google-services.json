@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "721249806336",
+    "project_id": "lofo-app-15efa",
+    "storage_bucket": "lofo-app-15efa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:721249806336:android:256aedf1a7cc15ad5f10e5",
+        "android_client_info": {
+          "package_name": "com.example.lofo_lost_found"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "721249806336-3vpo4t5lr1ojlias73snb80qr8kjid6f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3rllXJva-I2pz6kBbEbSsxJo-eotJ1dI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "721249806336-3vpo4t5lr1ojlias73snb80qr8kjid6f.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "721249806336-nmevgvr9ijsrj8kekn7f6e6kekl7fhlf.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.lofoLostFound"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
