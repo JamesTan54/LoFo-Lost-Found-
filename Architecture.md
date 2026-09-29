@@ -1,25 +1,25 @@
-# Architecture.md: Build a Flutter & Firebase Mobile Application named **LoFo (Lost & Found)**.
+# Architecture.md: Membangun Aplikasi Mobile Flutter & Firebase bernama **LoFo (Lost & Found)**.
 
-Purpose:
-Help users easily report, search, and manage lost or found items in real-time. The application collects item reports with images, stores them in Cloud Firestore, and allows direct user contact via WhatsApp launcher.
+Tujuan:
+Membantu pengguna melaporkan, mencari, dan mengelola laporan barang hilang atau ditemukan secara real-time. Aplikasi ini mengumpulkan data laporan barang beserta foto, menyimpannya di Cloud Firestore, dan memungkinkan komunikasi langsung antar pengguna melalui integrasi WhatsApp.
 
-Use this stack:
+Gunakan tech stack ini:
 
 * Frontend: Flutter (Dart) + Material 3 UI
-* Backend Services: Firebase Authentication, Cloud Firestore, Firebase Storage
-* External Integration: url_launcher (WhatsApp Integration)
-* Media Package: image_picker
+* Layanan Backend: Firebase Authentication, Cloud Firestore, Firebase Storage
+* Integrasi Eksternal: url_launcher (Integrasi WhatsApp)
+* Package Media: image_picker
 
-Code rules:
+Aturan kode:
 
-* Do not add comments unless truly necessary.
-* Use PascalCase for Widget classes, Screen names, Models, and Enums.
-* Local variables and fields may use camelCase.
-* Keep UI components modular and isolated inside the widgets directory.
-* Use a clean and simple Flutter folder structure.
-* Use StreamBuilder for real-time database updates on the main feed.
+* Jangan tambahkan komentar kecuali sangat diperlukan.
+* Gunakan PascalCase untuk kelas Widget, nama Layar (Screen), Model, dan Enum.
+* Variabel lokal dan field boleh menggunakan camelCase.
+* Jaga agar komponen UI tetap modular dan terisolasi di dalam direktori `widgets`.
+* Gunakan struktur folder Flutter yang bersih dan sederhana.
+* Gunakan StreamBuilder untuk pembaruan data real-time pada feed utama.
 
-Main entities:
+Entitas utama:
 
 1. User
 
@@ -40,73 +40,73 @@ Main entities:
 * ImageUrl
 * CreatedAt
 
-Database rules:
+Aturan database:
 
-* All item reports are stored in the `items` collection in Cloud Firestore.
-* Real-time query streams must order items by `createdAt` in descending order by default.
-* Item images must be uploaded to Firebase Storage under `items/{userId}_{timestamp}.jpg` before creating a document.
-* Deleting an item report must delete both its Firestore document and associated image in Firebase Storage.
-* Users can only edit or delete item documents where `userId` matches their authenticated UID.
+* Semua laporan barang disimpan di dalam koleksi `items` pada Cloud Firestore.
+* Kueri stream real-time harus mengurutkan barang berdasarkan `createdAt` dari yang terbaru (descending) secara otomatis.
+* Foto barang harus diunggah ke Firebase Storage pada jalur `items/{userId}_{timestamp}.jpg` sebelum dokumen Firestore dibuat.
+* Menghapus laporan barang wajib menghapus dokumen di Firestore sekaligus berkas gambarnya di Firebase Storage.
+* Pengguna hanya dapat mengubah atau menghapus dokumen barang apabila `userId` sesuai dengan UID akun mereka yang sedang login.
 
-Backend & Firebase features:
+Fitur Backend & Firebase:
 
-1. Authentication Service
+1. Layanan Autentikasi
 
-* Email & Password registration and login.
-* Auth state listener to persist login sessions automatically.
+* Registrasi dan masuk akun menggunakan Email & Password.
+* Penggunaan auth state listener untuk menjaga sesi login tetap aktif secara otomatis.
 
-2. Item CRUD Operations
+2. Operasi CRUD Barang
 
-* Create: Upload image to Firebase Storage, then write item details to Firestore.
-* Read: Stream list of reports in real-time for feed display.
-* Update: Edit details of existing reports owned by current user.
-* Delete: Remove document and image binaries.
+* Create (Tambah): Mengunggah gambar ke Firebase Storage, kemudian menyimpan detail barang ke Firestore.
+* Read (Baca): Mengalirkan (stream) daftar laporan secara real-time untuk tampilan feed.
+* Update (Ubah): Memperbarui detail laporan yang dimiliki oleh pengguna yang sedang login.
+* Delete (Hapus): Menghapus data dokumen beserta berkas foto dari penyimpanan.
 
-3. Search & Filter Engine
+3. Sistem Pencarian & Filter
 
-* Search by item title directly in memory / Firestore stream.
-* Filter reports by type: 'Semua', 'Hilang', or 'Ditemukan'.
-* Sort reports by date: 'Terbaru' (Newest) and 'Terlama' (Oldest).
+* Pencarian berdasarkan judul barang secara langsung pada aliran data (stream) Firestore.
+* Filter laporan berdasarkan tipe: 'Semua', 'Hilang', atau 'Ditemukan'.
+* Pengurutan laporan berdasarkan tanggal: 'Terbaru' dan 'Terlama'.
 
-4. External WhatsApp Launcher
+4. Peluncur WhatsApp Eksternal
 
-* Launch WhatsApp chat directly using `url_launcher` with pre-filled message template.
+* Membuka obrolan WhatsApp secara langsung menggunakan `url_launcher` dengan draf pesan otomatis.
 
-Frontend pages & widgets:
+Halaman & Widget Frontend:
 
 1. LoginScreen & RegisterScreen
 
-* Authentication forms with input validation.
-* Header branding featuring the custom `LofoLogo` widget.
+* Formulir autentikasi lengkap dengan validasi input.
+* Header identitas visual menggunakan widget kustom `LofoLogo`.
 
-2. HomeScreen (Dashboard Feed)
+2. HomeScreen (Feed Utama)
 
-* Real-time item feed list using `StreamBuilder`.
-* Top search bar and category filter action buttons.
-* Floating Action Button (FAB) to add a new report.
+* Tampilan daftar laporan real-time menggunakan `StreamBuilder`.
+* Bilah pencarian di bagian atas serta tombol aksi filter kategori.
+* Floating Action Button (FAB) untuk menuju halaman tambah laporan.
 
 3. AddItemScreen
 
-* Image picker field with interactive preview.
-* Input fields for Title, Type toggle ('Hilang'/'Ditemukan'), Location, Phone Number, and Description.
-* Upload indicator on submission.
+* Area pilih foto dari galeri/kamera lengkap dengan pratinjau interaktif.
+* Input formulir untuk Judul, Pilihan Tipe ('Hilang'/'Ditemukan'), Lokasi, Nomor HP/WA, dan Deskripsi.
+* Indikator proses pengunggahan saat formulir dikirim.
 
-4. Custom Components
+4. Komponen Kustom
 
-* `LofoLogo`: Custom composite widget combining location pin and magnifying glass graphics.
-* `ItemCard`: Feed item card displaying image preview, status badge, title, location, timestamp, and contact action button.
-* `FilterBottomSheet`: Bottom sheet dialog for category filtering and sorting.
+* `LofoLogo`: Widget kombinasi kustom yang menggabungkan ikon pin lokasi dan kaca pembesar.
+* `ItemCard`: Kartu tampilan barang pada feed yang berisi foto, lencana status, judul, lokasi, waktu, dan tombol panggil WA.
+* `FilterBottomSheet`: Dialog lembaran bawah (bottom sheet) untuk mengatur filter kategori dan pengurutan data.
 
-UI requirements:
+Persyaratan UI:
 
-* Use Indonesian language for all UI text, labels, buttons, dialogs, and validation messages.
-* Theme aesthetics: Terracotta / Warm Earthy palette (`#C85A32`) with clean light backgrounds.
-* Status badge colors:
-  * Hilang: Terracotta / Dark Red
-  * Ditemukan: Forest Green
-* Responsive Material 3 cards, bottom sheets, and confirmation dialogs before item deletion.
+* Gunakan bahasa Indonesia untuk seluruh teks UI, label, tombol, dialog, dan pesan validasi.
+* Estetika tema: Palet Terracotta / Warm Earthy (`#C85A32`) dengan latar belakang terang yang bersih.
+* Warna lencana status:
+  * Hilang: Terracotta / Merah Tua
+  * Ditemukan: Hijau Hutan
+* Tampilan kartu responsif berstandar Material 3, bottom sheet, serta dialog konfirmasi sebelum menghapus laporan.
 
-Project structure:
+Struktur proyek:
 
 ```text
 lofo_app/
