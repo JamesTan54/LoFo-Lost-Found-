@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
+import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 
-// Import Screen (Sesuaikan folder/path di proyek Anda jika berbeda)
+// Import file course.dart (karena berada di folder lib/ yang sama dengan main.dart)
+import 'models/course.dart';
+
+// Import Screen
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 
@@ -22,6 +25,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Inisialisasi data Course sesuai format tugas
+    final course = Course(
+      name: 'Pemrograman Web',
+      semester: 'Ganjil',
+      year: 2026,
+    );
+
+    // Opsi: Opsional untuk mengecek output di Console Debug/Terminal
+    print(course.displayText); // Hasil: A: Pemrograman Web (Ganjil 2026)
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Lost & Found',
@@ -41,7 +54,8 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          // Jika sudah login -> Tampilkan HomeScreen
+          // Jika sudah login -> Tampilkan HomeScreen 
+          // (Kamu bisa melempar data course ke HomeScreen jika dibutuhkan)
           if (snapshot.hasData) {
             return const HomeScreen();
           }
