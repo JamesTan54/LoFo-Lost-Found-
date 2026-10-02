@@ -1,6 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../services/item_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'item_detail_screen.dart';
 
 class MyItemsScreen extends StatelessWidget {
@@ -8,118 +8,76 @@ class MyItemsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ItemService itemService = ItemService();
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF7F5),
       appBar: AppBar(
-        title: const Text('Laporan Saya'),
-        backgroundColor: Colors.blue,
+        title: const Text('Barang Saya'),
+        backgroundColor: const Color(0xFF3D2314),
         foregroundColor: Colors.white,
       ),
-      body: StreamBuilder(
-        stream: itemService.getUserItems(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Terjadi kesalahan: ${snapshot.error}'));
-          }
+      body: user == null
+          ? const Center(child: Text('Silakan login terlebih dahulu.'))
+          : StreamBuilder(
+              stream: FirebaseFirestore.instance
+                  .collection('items')
+                  .where('userId', isEqualTo: user.uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFC87038)),
+                  );
+                }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text('Belum ada barang yang Anda tambahkan.'),
+                  );
+                }
 
-          final docs = snapshot.data?.docs ?? [];
+                final docs = snapshot.data!.docs;
 
-          if (docs.isEmpty) {
-            return const Center(
-              child: Text(
-                'Anda belum membuat laporan.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            );
-          }
+                return ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final doc = docs[index];
+                    final rawData = doc.data() as Map? ?? {};
+                    
+                    // Menggabungkan ID dokumen dengan data Firestore
+                    final itemData = {
+                      'id': doc.id,
+                      ...rawData,
+                    };
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: docs.length,
-            itemBuilder: (context, index) {
-              final doc = docs[index];
-              final data = doc.data() as Map;
-              final isLost = data['type'] == 'lost';
-              final String? imageString = data['imageUrl'];
-
-              return Card(
-                elevation: 3,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(12),
-                  leading: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: imageString != null && imageString.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.memory(
-                              base64Decode(imageString),
-                              fit: BoxFit.cover,
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      child: ListTile(
+                        title: Text(
+                          itemData['title'] ?? 'Tanpa Judul',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text('Lokasi: ${itemData['location'] ?? '-'}'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ItemDetailScreen(
+                                // Perbaikan Type Error: Dikonversi eksplisit ke Map
+                                itemData: Map.from(itemData),
+                              ),
                             ),
-                          )
-                        : Icon(
-                            isLost ? Icons.search : Icons.check_circle,
-                            color: isLost ? Colors.red : Colors.green,
-                          ),
-                  ),
-                  title: Text(
-                    data['title'] ?? 'Tanpa Nama',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(data['location'] ?? ''),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ItemDetailScreen(itemData: data),
+                          );
+                        },
                       ),
                     );
                   },
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () async {
-                      final confirm = await showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Hapus Laporan'),
-                          content: const Text('Yakin ingin menghapus laporan ini?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Batal'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        ),
-                      );
-
-                      if (confirm == true) {
-                        await itemService.deleteItem(doc.id);
-                      }
-                    },
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                );
+              },
+            ),
     );
   }
 }

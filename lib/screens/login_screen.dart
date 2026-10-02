@@ -83,8 +83,8 @@ class _LoginScreenState extends State {
                         // LOGO
                         Container(
                           padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF6F0),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFFF6F0),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(

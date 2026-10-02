@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../routes/app_routes.dart';
+import 'item_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,342 +15,70 @@ class _HomeScreenState extends State {
   static const Color primaryColor = Color(0xFFC87038);
   static const Color darkHeaderColor = Color(0xFF3D2314);
 
-  int _currentIndex = 0;
-  String _searchQuery = '';
-  String _selectedCategory = 'Semua';
+  final int _currentIndex = 0;
+  String _filterType = 'Semua';
 
-  // FUNGSI KHUSUS DETEKSI STATUS BARANG (HILANG / DITEMUKAN)
-  bool _isItemHilang(Map data) {
-    final statusFields = [
-      data['status'],
-      data['jenis'],
-      data['jenisLaporan'],
-      data['type'],
-      data['tipe'],
-      data['statusLaporan'],
-      data['category'],
-      data['kategori'],
-      data['kategoriBarang'],
-    ];
-
-    // 1. Cek nilai persis di field Firestore
-    for (var field in statusFields) {
-      if (field != null) {
-        final val = field.toString().trim().toLowerCase();
-        if (val == 'ditemukan' || val == 'ketemu' || val == 'penemuan' || val == 'found') {
-          return false;
-        }
-        if (val == 'hilang' || val == 'kehilangan' || val == 'lost') {
-          return true;
-        }
-      }
+  void _onTabTapped(int index) {
+    if (index == _currentIndex) return;
+    if (index == 1) {
+      Navigator.pushReplacementNamed(context, AppRoutes.addItem);
+    } else if (index == 2) {
+      Navigator.pushReplacementNamed(context, AppRoutes.myReports);
     }
-
-    // 2. Cek tipe boolean jika ada
-    if (data['isHilang'] is bool) return data['isHilang'];
-    if (data['isFound'] is bool) return !data['isFound'];
-
-    // 3. Cek pencocokan substring
-    for (var field in statusFields) {
-      if (field != null) {
-        final val = field.toString().trim().toLowerCase();
-        if (val.contains('ditemukan') || val.contains('ketemu') || val.contains('penemuan') || val.contains('found')) {
-          if (!val.contains('belum')) return false;
-        }
-        if (val.contains('hilang') || val.contains('kehilangan') || val.contains('lost')) {
-          return true;
-        }
-      }
-    }
-
-    return true; // Default
   }
 
-  // FUNGSI MEMBUKA MENU FILTER
-  void _showFilterBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Filter Kategori',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 10,
-                    children: ['Semua', 'Hilang', 'Ditemukan'].map((category) {
-                      final isSelected = _selectedCategory == category;
-                      return ChoiceChip(
-                        label: Text(category),
-                        selected: isSelected,
-                        selectedColor: primaryColor,
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black87,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() {
-                              _selectedCategory = category;
-                            });
-                            setModalState(() {});
-                            Navigator.pop(context);
-                          }
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // FUNGSI TAMPILKAN DETAIL LAPORAN
-  void _showDetailModal({
-    required String title,
-    required String category,
-    required String location,
-    required String contact,
-    required bool isHilang,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Chip(
-                label: Text(
-                  category,
-                  style: TextStyle(
-                    color: isHilang ? const Color(0xFFC62828) : const Color(0xFF2E7D32),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                backgroundColor: isHilang ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
-              ),
-              const Divider(height: 24),
-              ListTile(
-                leading: const Icon(Icons.location_on, color: primaryColor),
-                title: const Text('Lokasi'),
-                subtitle: Text(location),
-                contentPadding: EdgeInsets.zero,
-              ),
-              ListTile(
-                leading: const Icon(Icons.phone, color: primaryColor),
-                title: const Text('Kontak'),
-                subtitle: Text(contact),
-                contentPadding: EdgeInsets.zero,
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Tutup'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  Future _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, AppRoutes.login);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFAF7F5),
+      appBar: AppBar(
+        backgroundColor: darkHeaderColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'LoFo - Lost & Found',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Keluar',
+            onPressed: _logout,
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            // --- HEADER ATAS ---
+            // FILTER BAR
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: darkHeaderColor,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: Column(
+              color: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: primaryColor,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.search, color: Colors.white, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'LoFo',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.logout, color: Colors.white),
-                        tooltip: 'Logout',
-                        onPressed: () async {
-                          await FirebaseAuth.instance.signOut();
-                        },
-                      ),
-                      Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.white24,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.person, color: Colors.white, size: 28),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Search Bar & Filter Button
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: TextField(
-                            onChanged: (value) {
-                              setState(() {
-                                _searchQuery = value.toLowerCase();
-                              });
-                            },
-                            decoration: const InputDecoration(
-                              icon: Icon(Icons.search, color: Colors.grey),
-                              hintText: 'Temukan Barangmu',
-                              border: InputBorder.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: _selectedCategory != 'Semua' ? const Color(0xFFFF8F00) : primaryColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.tune, color: Colors.white),
-                          tooltip: 'Filter Kategori',
-                          onPressed: _showFilterBottomSheet,
-                        ),
-                      ),
-                    ],
-                  ),
+                  _buildFilterChip('Semua'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Hilang'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('Ditemukan'),
                 ],
               ),
             ),
+            const Divider(height: 1),
 
-            if (_selectedCategory != 'Semua')
-              Padding(
-                padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
-                child: Row(
-                  children: [
-                    Text(
-                      'Filter Aktif: $_selectedCategory',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: primaryColor,
-                      ),
-                    ),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = 'Semua';
-                        });
-                      },
-                      child: const Text(
-                        'Reset Filter',
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 12,
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // --- DAFTAR LAPORAN BARANG ---
+            // STREAM FIRESTORE
             Expanded(
               child: StreamBuilder(
-                stream: FirebaseFirestore.instance.collection('items').snapshots(),
+                stream: FirebaseFirestore.instance
+                    .collection('items')
+                    .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
@@ -358,110 +86,122 @@ class _HomeScreenState extends State {
                     );
                   }
 
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  if (snapshot.hasError) {
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.inbox_outlined, size: 70, color: Color(0xFFBDBDBD)),
-                          SizedBox(height: 12),
-                          Text(
-                            'Belum ada laporan barang.',
-                            style: TextStyle(color: Colors.grey, fontSize: 16),
+                        children: [
+                          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                          const SizedBox(height: 12),
+                          Text('Terjadi kesalahan: ${snapshot.error}'),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: () => setState(() {}),
+                            style: ElevatedButton.styleFrom(backgroundColor: primaryColor),
+                            child: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
                           ),
                         ],
                       ),
                     );
                   }
 
-                  var docs = snapshot.data!.docs;
+                  final docs = snapshot.data?.docs ?? [];
 
-                  // PROSES FILTER KATEGORI
-                  if (_selectedCategory == 'Hilang') {
-                    docs = docs.where((doc) {
-                      final data = doc.data() as Map;
-                      return _isItemHilang(data);
-                    }).toList();
-                  } else if (_selectedCategory == 'Ditemukan') {
-                    docs = docs.where((doc) {
-                      final data = doc.data() as Map;
-                      return !_isItemHilang(data);
-                    }).toList();
-                  }
+                  // PENYARINGAN (Mendukung field 'type' dan 'status', Bahasa Inggris & Indonesia)
+                  final filteredDocs = docs.where((doc) {
+                    final data = doc.data() as Map? ?? {};
+                    final rawType = (data['type'] ?? data['status'] ?? '').toString().toLowerCase();
 
-                  // PROSES FILTER PENCARIAN
-                  if (_searchQuery.isNotEmpty) {
-                    docs = docs.where((doc) {
-                      final data = doc.data() as Map;
-                      final title = (data['title'] ?? data['namaBarang'] ?? data['nama'] ?? data['judul'] ?? '').toString().toLowerCase();
-                      return title.contains(_searchQuery);
-                    }).toList();
-                  }
+                    if (_filterType == 'Semua') return true;
+                    if (_filterType == 'Hilang') {
+                      return rawType == 'lost' || rawType == 'hilang';
+                    }
+                    if (_filterType == 'Ditemukan') {
+                      return rawType == 'found' || rawType == 'ditemukan';
+                    }
+                    return true;
+                  }).toList();
 
-                  if (docs.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'Tidak ada data untuk filter "$_selectedCategory"',
-                        style: const TextStyle(color: Colors.grey, fontSize: 16),
+                  // PENGURUTAN (Terbaru di atas, aman dari error createdAt null)
+                  filteredDocs.sort((a, b) {
+                    final dataA = a.data() as Map? ?? {};
+                    final dataB = b.data() as Map? ?? {};
+                    final timeA = dataA['createdAt'] as Timestamp?;
+                    final timeB = dataB['createdAt'] as Timestamp?;
+
+                    if (timeA == null && timeB == null) return 0;
+                    if (timeA == null) return 1;
+                    if (timeB == null) return -1;
+                    return timeB.compareTo(timeA);
+                  });
+
+                  if (filteredDocs.isEmpty) {
+                    return const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.inbox_outlined, size: 64, color: Colors.grey),
+                          SizedBox(height: 12),
+                          Text(
+                            'Belum ada laporan barang',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ],
                       ),
                     );
                   }
 
                   return ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: docs.length,
+                    itemCount: filteredDocs.length,
                     itemBuilder: (context, index) {
-                      final data = docs[index].data() as Map;
-                      
-                      final title = data['title'] ?? data['namaBarang'] ?? data['nama'] ?? data['judul'] ?? 'Tanpa Judul';
-                      final location = data['location'] ?? data['lokasi'] ?? data['tempat'] ?? 'Tidak diketahui';
-                      final contact = data['contact'] ?? data['kontak'] ?? data['phone'] ?? data['noHp'] ?? data['telepon'] ?? '-';
-                      final imageUrl = data['imageUrl'] ?? data['image'] ?? data['foto'] ?? data['gambar'];
+                      final itemDoc = filteredDocs[index];
+                      final itemData = itemDoc.data() as Map? ?? {};
 
-                      // Sinkronisasi status dan label badge
-                      final isHilang = _isItemHilang(data);
-                      final categoryLabel = isHilang ? 'Hilang' : 'Ditemukan';
+                      final String title = (itemData['title'] ?? 'Tanpa Judul').toString();
+                      final String location = (itemData['location'] ?? '-').toString();
+                      final String imageUrl = (itemData['imageUrl'] ?? '').toString();
 
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          _showDetailModal(
-                            title: title,
-                            category: categoryLabel,
-                            location: location,
-                            contact: contact,
-                            isHilang: isHilang,
-                          );
-                        },
-                        child: Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          elevation: 0,
-                          color: const Color(0xFFFFF6F0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                      // KONVERSI TAMPILAN STATUS STATUS
+                      final String rawType = (itemData['type'] ?? itemData['status'] ?? 'lost').toString().toLowerCase();
+                      final bool isLost = rawType == 'lost' || rawType == 'hilang';
+                      final String displayStatus = isLost ? 'Hilang' : 'Ditemukan';
+
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ItemDetailScreen(
+        itemData: Map.from(itemData), // <--- Dikonversi ke Map
+      ),
+    ),
+  );
+},
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Row(
                               children: [
-                                Container(
-                                  width: 70,
-                                  height: 70,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEEEEEE),
-                                    borderRadius: BorderRadius.circular(12),
-                                    image: (imageUrl != null && imageUrl.toString().isNotEmpty)
-                                        ? DecorationImage(
-                                            image: NetworkImage(imageUrl),
-                                            fit: BoxFit.cover,
-                                          )
-                                        : null,
-                                  ),
-                                  child: (imageUrl == null || imageUrl.toString().isEmpty)
-                                      ? const Icon(Icons.image, color: Color(0xFFBDBDBD), size: 32)
-                                      : null,
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: imageUrl.trim().isNotEmpty
+                                      ? Image.network(
+                                          imageUrl,
+                                          width: 70,
+                                          height: 70,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+                                        )
+                                      : _buildPlaceholderImage(),
                                 ),
-                                const SizedBox(width: 12),
+                                const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,37 +209,44 @@ class _HomeScreenState extends State {
                                       Text(
                                         title,
                                         style: const TextStyle(
-                                          fontSize: 16,
                                           fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: darkHeaderColor,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
-                                        'Lokasi: $location',
-                                        style: const TextStyle(color: Color(0xFF616161), fontSize: 13),
-                                      ),
-                                      Text(
-                                        'Kontak: $contact',
-                                        style: const TextStyle(color: Color(0xFF616161), fontSize: 13),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              location,
+                                              style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: isHilang ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
-                                    borderRadius: BorderRadius.circular(8),
+                                    color: isLost ? const Color(0xFFFFEBEE) : const Color(0xFFE8F5E9),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isLost ? Colors.red : Colors.green,
+                                    ),
                                   ),
                                   child: Text(
-                                    categoryLabel,
+                                    displayStatus,
                                     style: TextStyle(
-                                      color: isHilang ? const Color(0xFFD32F2F) : const Color(0xFF388E3C),
+                                      color: isLost ? Colors.red[800] : Colors.green[800],
                                       fontWeight: FontWeight.bold,
                                       fontSize: 12,
                                     ),
@@ -518,18 +265,11 @@ class _HomeScreenState extends State {
           ],
         ),
       ),
-
-      // --- BOTTOM NAVIGATION BAR ---
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-          if (index == 1) {
-            Navigator.pushNamed(context, AppRoutes.addItem);
-          }
-        },
+        onTap: _onTabTapped,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -545,6 +285,35 @@ class _HomeScreenState extends State {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFilterChip(String label) {
+    final bool isSelected = _filterType == label;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: primaryColor,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.black87,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      onSelected: (selected) {
+        if (selected) {
+          setState(() {
+            _filterType = label;
+          });
+        }
+      },
+    );
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Container(
+      width: 70,
+      height: 70,
+      color: Colors.grey[200],
+      child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 30),
     );
   }
 }

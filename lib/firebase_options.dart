@@ -56,22 +56,22 @@ class DefaultFirebaseOptions {
     projectId: 'lofo-app-15efa',
     storageBucket: 'lofo-app-15efa.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBvUzDKOvbFtVZyfrAvauQfncHL3I2GoLc',
     appId: '1:721249806336:ios:691cfe3f13d17c2e5f10e5',
     messagingSenderId: '721249806336',
     projectId: 'lofo-app-15efa',
     storageBucket: 'lofo-app-15efa.firebasestorage.app',
+    iosClientId: '721249806336-nmevgvr9ijsrj8kekn7f6e6kekl7fhlf.apps.googleusercontent.com',
     iosBundleId: 'com.example.lofoLostFound',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBvUzDKOvbFtVZyfrAvauQfncHL3I2GoLc',
     appId: '1:721249806336:ios:691cfe3f13d17c2e5f10e5',
     messagingSenderId: '721249806336',
     projectId: 'lofo-app-15efa',
     storageBucket: 'lofo-app-15efa.firebasestorage.app',
+    iosClientId: '721249806336-nmevgvr9ijsrj8kekn7f6e6kekl7fhlf.apps.googleusercontent.com',
     iosBundleId: 'com.example.lofoLostFound',
   );
 

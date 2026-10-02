@@ -1,98 +1,120 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // <--- Sudah diperbaiki (menggunakan titik dua)
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../routes/app_routes.dart';
+import 'item_detail_screen.dart';
 
-class MyReportsScreen extends StatelessWidget {
+class MyReportsScreen extends StatefulWidget {
   const MyReportsScreen({super.key});
+
+  @override
+  State createState() => _MyReportsScreenState();
+}
+
+class _MyReportsScreenState extends State {
+  final int _currentIndex = 2; // Index 2 untuk tab "Laporan Saya"
+
+  void _onItemTapped(int index) {
+    if (index == _currentIndex) return;
+
+    if (index == 0) {
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    } else if (index == 1) {
+      Navigator.pushReplacementNamed(context, AppRoutes.addItem);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    const primaryBrown = Color(0xFFC87038);
-    const darkBrown = Color(0xFF3D2115);
-    final isWebDesktop = MediaQuery.of(context).size.width >= 600;
 
     return Scaffold(
-      backgroundColor: isWebDesktop ? const Color(0xFFF4F0EC) : Colors.white,
+      backgroundColor: const Color(0xFFFAF7F5),
       appBar: AppBar(
-        title: const Text('Laporanku', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: darkBrown,
+        title: const Text('Laporan Saya'),
+        backgroundColor: const Color(0xFF3D2314),
         foregroundColor: Colors.white,
-        centerTitle: true,
+        automaticallyImplyLeading: false,
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: Container(
-            color: Colors.white,
-            child: StreamBuilder(
+      body: user == null
+          ? const Center(child: Text('Silakan login terlebih dahulu.'))
+          : StreamBuilder(
               stream: FirebaseFirestore.instance
-                  .collection('items')
-                  .where('userId', isEqualTo: user?.uid)
-                  .snapshots(),
+    .collection('reports')
+    .where('userId', isEqualTo: user.uid) // <-- Jika UID berbeda, data kosong
+    .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: primaryBrown));
+                  return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFC87038)),
+                  );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(
-                    child: Text(
-                      'Kamu belum pernah membuat laporan.',
-                      style: TextStyle(color: Colors.grey),
-                    ),
+                    child: Text('Belum ada laporan yang dibuat.'),
                   );
                 }
 
                 final docs = snapshot.data!.docs;
 
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                return ListView.builder(
+                  padding: const EdgeInsets.all(12),
                   itemCount: docs.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map;
-                    final docId = docs[index].id;
-                    final title = data['title'] ?? 'Tanpa Judul';
-                    final isLost = (data['type'] ?? '') == 'Hilang';
+                    final doc = docs[index];
+                    final rawData = doc.data() as Map? ?? {};
+
+                    final itemData = {
+                      'id': doc.id,
+                      ...rawData,
+                    };
 
                     return Card(
-                      elevation: 0,
-                      color: const Color(0xFFFAF8F5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Colors.grey.shade300),
-                      ),
+                      margin: const EdgeInsets.symmetric(vertical: 6),
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: isLost ? Colors.red.shade100 : Colors.orange.shade100,
-                          child: Icon(
-                            isLost ? Icons.search_off : Icons.check,
-                            color: isLost ? Colors.red : primaryBrown,
-                          ),
-                        ),
                         title: Text(
-                          title,
+                          itemData['title'] ?? 'Tanpa Judul',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text('Status: ${isLost ? "Barang Hilang" : "Barang Ditemukan"}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                          onPressed: () async {
-                            await FirebaseFirestore.instance
-                                .collection('items')
-                                .doc(docId)
-                                .delete();
-                          },
-                        ),
+                        subtitle: Text(itemData['description'] ?? '-'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ItemDetailScreen(
+                                itemData: Map.from(itemData),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
                 );
               },
             ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: const Color(0xFFC87038),
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Beranda',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_box_outlined),
+            label: 'Lapor',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assignment_outlined),
+            label: 'Laporan Saya',
+          ),
+        ],
       ),
     );
   }
