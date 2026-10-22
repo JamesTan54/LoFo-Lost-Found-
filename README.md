@@ -21,3 +21,6 @@ Pelacakan lokasi barang berbasis GPS real-time atau integrasi AirTag Fitur chatt
 Kriteria aplikasi dinyatakan berhasil
 
 Data laporan dan foto barang berhasil tersimpan serta tersinkronisasi secara real-time antar-perangkat menggunakan Firebase (Cloud Firestore & Storage) Fitur filter kategori dan status (Hilang/Ditemukan) berfungsi dengan akurat Tombol kontak berhasil mengarahkan pengguna ke aplikasi WhatsApp/Telepon Antarmuka aplikasi berjalan lancar, responsif, dan bebas dari crash saat diuji.
+
+TUGAS p5 = https://docs.google.com/document/d/1v3IkYVpiDmksUPaUIQlUpu-daB7sAr-a2MwRS_pKmfE/edit?usp=sharing
+TUGAS P6 = https://docs.google.com/document/d/1xEbMRbIPNlNDFnOaP6p9r8asXLvD026BrSiytMqnHio/edit?usp=sharing
