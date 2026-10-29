@@ -1,18 +1,23 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart'; // Menambahkan support deteksi Web (kIsWeb)
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import '../routes/app_routes.dart';
+import '../services/notification_service.dart';
+import '../services/camera_service.dart';
 
 class AddItemScreen extends StatefulWidget {
   const AddItemScreen({super.key});
 
   @override
-  State createState() => _AddItemScreenState();
+  State<AddItemScreen> createState() => _AddItemScreenState();
 }
 
-class _AddItemScreenState extends State {
+class _AddItemScreenState extends State<AddItemScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Index 1 untuk tab "Lapor"
   final int _currentIndex = 1;
 
@@ -22,6 +27,10 @@ class _AddItemScreenState extends State {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _imageUrlController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+
+  // Integrated Services & State untuk Kamera
+  final CameraService _cameraService = CameraService();
+  XFile? _selectedImage;
 
   String _reportType = 'Barang Hilang'; // Default: Barang Hilang
   bool _isLoading = false;
@@ -36,7 +45,30 @@ class _AddItemScreenState extends State {
     }
   }
 
-  Future _submitReport() async {
+  // Fungsi Ambil Foto dari Kamera
+  Future<void> _takePicture() async {
+    try {
+      final image = await _cameraService.takePhoto();
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+          _imageUrlController.text = image.path;
+        });
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pengambilan foto dibatalkan.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengakses kamera: $e')),
+      );
+    }
+  }
+
+  Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
 
     final user = FirebaseAuth.instance.currentUser;
@@ -50,6 +82,7 @@ class _AddItemScreenState extends State {
     setState(() => _isLoading = true);
 
     try {
+      // Simpan ke Firestore
       await FirebaseFirestore.instance.collection('reports').add({
         'userId': user.uid,
         'type': _reportType,
@@ -60,6 +93,15 @@ class _AddItemScreenState extends State {
         'description': _descriptionController.text.trim(),
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // =========================================================
+      // PEMANGGILAN NOTIFIKASI LOKAL SAAT BERHASIL
+      // =========================================================
+      await NotificationService.showNotification(
+        title: 'Laporan Berhasil Dibuat! 📢',
+        body: 'Barang "${_titleController.text.trim()}" di ${_locationController.text.trim()} telah dicatat di sistem LoFo.',
+      );
+      // =========================================================
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,7 +114,9 @@ class _AddItemScreenState extends State {
       _phoneController.clear();
       _imageUrlController.clear();
       _descriptionController.clear();
-      setState(() {});
+      setState(() {
+        _selectedImage = null;
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -209,7 +253,7 @@ class _AddItemScreenState extends State {
                     controller: _locationController,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.location_on_outlined),
-                      hintText: 'Lokasi',
+                      hintText: 'Lokasi Ditemukan / Hilang di Kampus',
                       filled: true,
                       fillColor: Colors.grey.shade50,
                       border: OutlineInputBorder(
@@ -247,52 +291,90 @@ class _AddItemScreenState extends State {
                   ),
                   const SizedBox(height: 12),
 
-                  // Input URL Gambar
-                  TextFormField(
-                    controller: _imageUrlController,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.image_outlined),
-                      hintText: 'URL Gambar Barang (Opsional)',
-                      filled: true,
-                      fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                  // Input URL Gambar & Tombol Kamera
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _imageUrlController,
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.image_outlined),
+                            hintText: 'URL Gambar (Opsional)',
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                          ),
+                        ),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _takePicture,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFC87038),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Icon(Icons.camera_alt),
                       ),
-                    ),
+                    ],
                   ),
                   const SizedBox(height: 12),
 
-                  // Box Pratinjau Gambar
+                  // Box Pratinjau Gambar (Dukungan Web + Mobile)
                   Container(
                     width: double.infinity,
-                    height: 150,
+                    height: 160,
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.grey.shade300),
                     ),
-                    child: _imageUrlController.text.isNotEmpty
-                        ? Image.network(
-                            _imageUrlController.text,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Center(
-                              child: Text('Gagal memuat URL gambar'),
-                            ),
+                    child: _selectedImage != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: kIsWeb
+                                ? Image.network(
+                                    _selectedImage!.path,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.file(
+                                    File(_selectedImage!.path),
+                                    fit: BoxFit.cover,
+                                  ),
                           )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.add_photo_alternate_outlined, size: 40, color: Colors.grey),
-                              SizedBox(height: 8),
-                              Text('Pratinjau gambar akan muncul di sini', style: TextStyle(color: Colors.grey)),
-                            ],
-                          ),
+                        : _imageUrlController.text.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  _imageUrlController.text,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Center(
+                                    child: Text('Gagal memuat URL gambar'),
+                                  ),
+                                ),
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  Icon(Icons.add_photo_alternate_outlined, size: 40, color: Colors.grey),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Pratinjau foto kamera / URL akan muncul di sini',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
                   ),
                   const SizedBox(height: 12),
 

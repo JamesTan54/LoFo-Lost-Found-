@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'; // <--- Impor Riverpod
 import 'firebase_options.dart';
 import 'routes/app_routes.dart';
+import 'services/notification_service.dart'; // <--- Impor NotificationService
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
@@ -16,6 +17,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Inisialisasi Layanan Notifikasi Lokal
+  await NotificationService.init();
 
   // Wajib dibungkus dengan ProviderScope agar Riverpod dapat berjalan
   runApp(
