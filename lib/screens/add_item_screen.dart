@@ -43,9 +43,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
-  // =========================================================
-  // POP-UP NOTIFIKASI DI ATAS (Warna bertema Home: #3D2314 & #C87038)
-  // =========================================================
+  
   void _showTopNotification({required String title, required String message}) {
     final overlay = Overlay.of(context);
     late OverlayEntry overlayEntry;
