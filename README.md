@@ -25,3 +25,5 @@ Data laporan dan foto barang berhasil tersimpan serta tersinkronisasi secara rea
 TUGAS p5 = https://docs.google.com/document/d/1v3IkYVpiDmksUPaUIQlUpu-daB7sAr-a2MwRS_pKmfE/edit?usp=sharing
 
 TUGAS P6 = https://docs.google.com/document/d/1xEbMRbIPNlNDFnOaP6p9r8asXLvD026BrSiytMqnHio/edit?usp=sharing
+
+TUGAS P8 = https://docs.google.com/document/d/1JAdhJXY_3ihmPqxZp37dr9-4ax4e5MeEKUHW901KAZA/edit?usp=sharing

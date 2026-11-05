@@ -8,15 +8,25 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State {
+class _HomeScreenState extends State<HomeScreen> {
   static const Color primaryColor = Color(0xFFC87038);
   static const Color darkHeaderColor = Color(0xFF3D2314);
 
   final int _currentIndex = 0;
   String _filterType = 'Semua';
+
+  // CONTROLLER & STATE SEARCH BAR
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   void _onTabTapped(int index) {
     if (index == _currentIndex) return;
@@ -57,6 +67,50 @@ class _HomeScreenState extends State {
       body: SafeArea(
         child: Column(
           children: [
+            // SEARCH BAR
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value.toLowerCase();
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Cari barang atau lokasi...',
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Colors.grey),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchQuery = '';
+                            });
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  fillColor: const Color(0xFFFAF7F5),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: primaryColor),
+                  ),
+                ),
+              ),
+            ),
+
             // FILTER BAR
             Container(
               color: Colors.white,
@@ -73,11 +127,11 @@ class _HomeScreenState extends State {
             ),
             const Divider(height: 1),
 
-            // STREAM FIRESTORE
+            // STREAM FIRESTORE (Disesuaikan ke koleksi 'reports')
             Expanded(
               child: StreamBuilder(
                 stream: FirebaseFirestore.instance
-                    .collection('items')
+                    .collection('reports') // <--- DIPERBAIKI (dari 'items' ke 'reports')
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -107,22 +161,28 @@ class _HomeScreenState extends State {
 
                   final docs = snapshot.data?.docs ?? [];
 
-                  // PENYARINGAN (Mendukung field 'type' dan 'status', Bahasa Inggris & Indonesia)
+                  // PENYARINGAN (Mendukung Jenis Laporan & Kata Kunci Search)
                   final filteredDocs = docs.where((doc) {
                     final data = doc.data() as Map? ?? {};
                     final rawType = (data['type'] ?? data['status'] ?? '').toString().toLowerCase();
 
-                    if (_filterType == 'Semua') return true;
+                    // 1. Filter Kategori (Hilang / Ditemukan)
+                    bool matchesCategory = true;
                     if (_filterType == 'Hilang') {
-                      return rawType == 'lost' || rawType == 'hilang';
+                      matchesCategory = rawType == 'lost' || rawType == 'barang hilang';
+                    } else if (_filterType == 'Ditemukan') {
+                      matchesCategory = rawType == 'found' || rawType == 'barang ditemukan';
                     }
-                    if (_filterType == 'Ditemukan') {
-                      return rawType == 'found' || rawType == 'ditemukan';
-                    }
-                    return true;
+
+                    // 2. Filter Search Bar (Berdasarkan Judul & Lokasi)
+                    final title = (data['title'] ?? '').toString().toLowerCase();
+                    final location = (data['location'] ?? '').toString().toLowerCase();
+                    bool matchesSearch = title.contains(_searchQuery) || location.contains(_searchQuery);
+
+                    return matchesCategory && matchesSearch;
                   }).toList();
 
-                  // PENGURUTAN (Terbaru di atas, aman dari error createdAt null)
+                  // PENGURUTAN (DIPERBAIKI: Laporan baru/timestamp null ditaruh di Paling Atas)
                   filteredDocs.sort((a, b) {
                     final dataA = a.data() as Map? ?? {};
                     final dataB = b.data() as Map? ?? {};
@@ -130,8 +190,8 @@ class _HomeScreenState extends State {
                     final timeB = dataB['createdAt'] as Timestamp?;
 
                     if (timeA == null && timeB == null) return 0;
-                    if (timeA == null) return 1;
-                    if (timeB == null) return -1;
+                    if (timeA == null) return -1; // <--- DIPERBAIKI (item baru naik ke atas)
+                    if (timeB == null) return 1;
                     return timeB.compareTo(timeA);
                   });
 
@@ -162,9 +222,9 @@ class _HomeScreenState extends State {
                       final String location = (itemData['location'] ?? '-').toString();
                       final String imageUrl = (itemData['imageUrl'] ?? '').toString();
 
-                      // KONVERSI TAMPILAN STATUS STATUS
+                      // KONVERSI TAMPILAN STATUS
                       final String rawType = (itemData['type'] ?? itemData['status'] ?? 'lost').toString().toLowerCase();
-                      final bool isLost = rawType == 'lost' || rawType == 'hilang';
+                      final bool isLost = rawType == 'lost' || rawType == 'barang hilang';
                       final String displayStatus = isLost ? 'Hilang' : 'Ditemukan';
 
                       return Card(
@@ -176,15 +236,15 @@ class _HomeScreenState extends State {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ItemDetailScreen(
-        itemData: Map.from(itemData), // <--- Dikonversi ke Map
-      ),
-    ),
-  );
-},
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ItemDetailScreen(
+                                  itemData: Map.from(itemData),
+                                ),
+                              ),
+                            );
+                          },
                           child: Padding(
                             padding: const EdgeInsets.all(12.0),
                             child: Row(
