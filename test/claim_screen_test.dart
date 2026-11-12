@@ -6,7 +6,7 @@ import 'package:lofo_lost_found/features/claim/claim_screen.dart';
 import 'package:lofo_lost_found/features/claim/claim_notifier.dart';
 
 
-class FakeClaimRepository extends ClaimRepository {
+class FakeClaimRepository implements ClaimRepository {
   final Map<String, dynamic>? mockData;
   final bool shouldThrowError;
 
