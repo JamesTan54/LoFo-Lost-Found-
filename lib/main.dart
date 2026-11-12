@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,12 +15,18 @@ import 'screens/my_reports_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase belum dikonfigurasi untuk Web: $e');
+  }
 
   // Inisialisasi Layanan Notifikasi Lokal
-  await NotificationService.init();
+  if (!kIsWeb) {
+    await NotificationService.init();
+  }
 
   // Wajib dibungkus dengan ProviderScope agar Riverpod dapat berjalan
   runApp(
@@ -37,25 +44,27 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'LoFo App',
       debugShowCheckedModeBanner: false,
-      home: StreamBuilder(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              backgroundColor: Color(0xFFFAF7F5),
-              body: Center(
-                child: CircularProgressIndicator(color: Color(0xFFC87038)),
-              ),
-            );
-          }
+      home: Firebase.apps.isEmpty
+          ? const LoginScreen()
+          : StreamBuilder(
+              stream: FirebaseAuth.instance.authStateChanges(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    backgroundColor: Color(0xFFFAF7F5),
+                    body: Center(
+                      child: CircularProgressIndicator(color: Color(0xFFC87038)),
+                    ),
+                  );
+                }
 
-          if (snapshot.hasData) {
-            return const HomeScreen();
-          }
+                if (snapshot.hasData) {
+                  return const HomeScreen();
+                }
 
-          return const LoginScreen();
-        },
-      ),
+                return const LoginScreen();
+              },
+            ),
       routes: {
         AppRoutes.login: (context) => const LoginScreen(),
         AppRoutes.register: (context) => const RegisterScreen(),
