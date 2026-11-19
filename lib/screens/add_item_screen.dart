@@ -30,7 +30,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final CameraService _cameraService = CameraService();
   XFile? _selectedImage;
 
-  String _reportType = 'Barang Hilang';
+  final String _reportType = 'Barang Hilang';
   bool _isLoading = false;
 
   void _onItemTapped(int index) {
@@ -161,6 +161,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
       await FirebaseFirestore.instance.collection('reports').add({
         'userId': user.uid,
         'type': _reportType,
+        'foundAt': null,
         'title': titleText,
         'location': locationText,
         'phone': _phoneController.text.trim(),
@@ -239,75 +240,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Jenis Laporan',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Tombol Pilihan Jenis Laporan
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _isLoading
-                                  ? null
-                                  : () => setState(() => _reportType = 'Barang Hilang'),
-                              icon: _reportType == 'Barang Hilang'
-                                  ? const Icon(Icons.check, color: Colors.red, size: 18)
-                                  : const SizedBox.shrink(),
-                              label: Text(
-                                'Barang Hilang',
-                                style: TextStyle(
-                                  color: _reportType == 'Barang Hilang' ? Colors.red : Colors.black87,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: _reportType == 'Barang Hilang'
-                                    ? Colors.red.shade50
-                                    : Colors.white,
-                                side: BorderSide(
-                                  color: _reportType == 'Barang Hilang'
-                                      ? Colors.red
-                                      : Colors.grey.shade300,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _isLoading
-                                  ? null
-                                  : () => setState(() => _reportType = 'Barang Ditemukan'),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: _reportType == 'Barang Ditemukan'
-                                    ? Colors.green.shade50
-                                    : Colors.white,
-                                side: BorderSide(
-                                  color: _reportType == 'Barang Ditemukan'
-                                      ? Colors.green
-                                      : Colors.grey.shade300,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: Text(
-                                'Barang Ditemukan',
-                                style: TextStyle(
-                                  color: _reportType == 'Barang Ditemukan' ? Colors.green : Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
                       // Input Nama Barang
                       TextFormField(
                         controller: _titleController,

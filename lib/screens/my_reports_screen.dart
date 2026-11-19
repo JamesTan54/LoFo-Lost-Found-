@@ -1,7 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; // <--- Sudah diperbaiki (menggunakan titik dua)
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../routes/app_routes.dart';
+import '../services/app_logger.dart';
 import 'item_detail_screen.dart';
 
 class MyReportsScreen extends StatefulWidget {
@@ -12,7 +14,22 @@ class MyReportsScreen extends StatefulWidget {
 }
 
 class _MyReportsScreenState extends State {
-  final int _currentIndex = 2; // Index 2 untuk tab "Laporan Saya"
+  final int _currentIndex = 2;
+  Timer? _cleanupTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _cleanupTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _cleanupTimer?.cancel();
+    super.dispose();
+  }
 
   void _onItemTapped(int index) {
     if (index == _currentIndex) return;
@@ -27,9 +44,10 @@ class _MyReportsScreenState extends State {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F5),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFAF7F5),
       appBar: AppBar(
         title: const Text('Laporan Saya'),
         backgroundColor: const Color(0xFF3D2314),
@@ -37,12 +55,17 @@ class _MyReportsScreenState extends State {
         automaticallyImplyLeading: false,
       ),
       body: user == null
-          ? const Center(child: Text('Silakan login terlebih dahulu.'))
+          ? Center(
+              child: Text(
+                'Silakan login terlebih dahulu.',
+                style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+              ),
+            )
           : StreamBuilder(
               stream: FirebaseFirestore.instance
-    .collection('reports')
-    .where('userId', isEqualTo: user.uid) // <-- Jika UID berbeda, data kosong
-    .snapshots(),
+                  .collection('reports')
+                  .where('userId', isEqualTo: user.uid)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -50,13 +73,33 @@ class _MyReportsScreenState extends State {
                   );
                 }
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text('Belum ada laporan yang dibuat.'),
+                final now = DateTime.now();
+                final docs = (snapshot.data?.docs ?? []).where((doc) {
+                  final data = doc.data() as Map? ?? {};
+                  final rawType = (data['type'] ?? data['status'] ?? '').toString().toLowerCase();
+                  final isFoundStatus = rawType == 'found' || rawType == 'barang ditemukan' || rawType == 'ditemukan';
+
+                  if (isFoundStatus && data['foundAt'] != null) {
+                    final foundTime = (data['foundAt'] as Timestamp).toDate();
+                    final elapsedMinutes = now.difference(foundTime).inMinutes;
+
+                    if (elapsedMinutes >= 30) {
+                      doc.reference.delete();
+                      AppLogger.info('AUTO_CLEANUP', 'Laporan ${doc.id} dihapus otomatis (>30 menit)');
+                      return false;
+                    }
+                  }
+                  return true;
+                }).toList();
+
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'Belum ada laporan yang dibuat.',
+                      style: TextStyle(color: isDark ? Colors.grey[300] : Colors.black87),
+                    ),
                   );
                 }
-
-                final docs = snapshot.data!.docs;
 
                 return ListView.builder(
                   padding: const EdgeInsets.all(12),
@@ -71,20 +114,31 @@ class _MyReportsScreenState extends State {
                     };
 
                     return Card(
+                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       margin: const EdgeInsets.symmetric(vertical: 6),
                       child: ListTile(
                         title: Text(
                           itemData['title'] ?? 'Tanpa Judul',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
                         ),
-                        subtitle: Text(itemData['description'] ?? '-'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        subtitle: Text(
+                          itemData['description'] ?? '-',
+                          style: TextStyle(color: isDark ? Colors.grey[300] : Colors.grey[700]),
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: isDark ? Colors.grey[400] : Colors.grey,
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => ItemDetailScreen(
-                                itemData: Map.from(itemData),
+                                itemData: Map<String, dynamic>.from(itemData),
                               ),
                             ),
                           );
@@ -96,10 +150,11 @@ class _MyReportsScreenState extends State {
               },
             ),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         currentIndex: _currentIndex,
         onTap: _onItemTapped,
         selectedItemColor: const Color(0xFFC87038),
-        unselectedItemColor: Colors.grey,
+        unselectedItemColor: isDark ? Colors.grey[400] : Colors.grey,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(

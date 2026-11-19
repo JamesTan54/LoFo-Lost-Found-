@@ -29,3 +29,5 @@ TUGAS P6 = https://docs.google.com/document/d/1xEbMRbIPNlNDFnOaP6p9r8asXLvD026Br
 TUGAS P8 = https://docs.google.com/document/d/1JAdhJXY_3ihmPqxZp37dr9-4ax4e5MeEKUHW901KAZA/edit?usp=sharing
 
 TUGAS P9 = https://docs.google.com/document/d/1LqiKVexhP6XU4h2NbG-jt4ed_FUEF7rFT9yiRRCQXCs/edit?usp=sharing
+
+TUGAS P10 = https://docs.google.com/document/d/1pjt5qWs-Q4bd-hktgJKsvL7n5UATITmi9qrpRnzZPx0/edit?usp=sharing

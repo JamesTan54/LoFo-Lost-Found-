@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../features/claim/claim_screen.dart';
+import '../services/app_logger.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final Map<String, dynamic> itemData;
@@ -65,6 +67,7 @@ class ItemDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final String itemId = (itemData['id'] ?? itemData['docId'] ?? '').toString();
     final String title = (itemData['title'] ?? 'Tanpa Judul').toString();
     final String location = (itemData['location'] ?? '-').toString();
@@ -73,11 +76,14 @@ class ItemDetailScreen extends StatelessWidget {
     final String phone = _extractPhoneNumber(itemData);
 
     final String rawType = (itemData['type'] ?? itemData['status'] ?? 'lost').toString().toLowerCase();
-    final bool isLost = rawType == 'lost' || rawType == 'hilang';
+    final bool isLost = rawType == 'lost' || rawType == 'hilang' || rawType == 'barang hilang';
     final String displayStatus = isLost ? 'Hilang' : 'Ditemukan';
 
+    final String? currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final bool isOwner = currentUserId != null && currentUserId == (itemData['userId'] ?? '').toString();
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7F5),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFAF7F5),
       appBar: AppBar(
         backgroundColor: darkHeaderColor,
         foregroundColor: Colors.white,
@@ -97,7 +103,7 @@ class ItemDetailScreen extends StatelessWidget {
               width: double.infinity,
               height: 200,
               decoration: BoxDecoration(
-                color: Colors.grey[200],
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.grey[200],
                 borderRadius: BorderRadius.circular(12),
               ),
               child: imageUrl.trim().isNotEmpty
@@ -106,10 +112,10 @@ class ItemDetailScreen extends StatelessWidget {
                       child: Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+                        errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(isDark),
                       ),
                     )
-                  : _buildPlaceholderImage(),
+                  : _buildPlaceholderImage(isDark),
             ),
             const SizedBox(height: 16),
 
@@ -120,10 +126,10 @@ class ItemDetailScreen extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: darkHeaderColor,
+                      color: isDark ? Colors.white : darkHeaderColor,
                     ),
                   ),
                 ),
@@ -146,7 +152,7 @@ class ItemDetailScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            const Divider(),
+            Divider(color: isDark ? Colors.grey.shade800 : null),
 
             // Lokasi
             Row(
@@ -156,8 +162,15 @@ class ItemDetailScreen extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Lokasi', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    Text(location, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    Text('Lokasi', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey, fontSize: 12)),
+                    Text(
+                      location,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -173,13 +186,15 @@ class ItemDetailScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Nomor WhatsApp', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      Text('Nomor WhatsApp', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey, fontSize: 12)),
                       Text(
                         phone.isNotEmpty ? phone : 'Tidak ada nomor',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: phone.isNotEmpty ? Colors.black87 : Colors.red[400],
+                          color: phone.isNotEmpty
+                              ? (isDark ? Colors.white : Colors.black87)
+                              : Colors.red[400],
                         ),
                       ),
                     ],
@@ -195,60 +210,94 @@ class ItemDetailScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            const Divider(),
+            Divider(color: isDark ? Colors.grey.shade800 : null),
 
             // Deskripsi
-            const Text(
+            Text(
               'Deskripsi Detail',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: darkHeaderColor),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : darkHeaderColor,
+              ),
             ),
             const SizedBox(height: 6),
-            Text(description, style: const TextStyle(fontSize: 14, height: 1.4)),
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                color: isDark ? Colors.grey[200] : Colors.black87,
+              ),
+            ),
             const SizedBox(height: 24),
 
-            // TOMBOL BARU: PROSES KLAIM / BOOKING (FITUR RIVERPOD)
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ClaimScreen(itemId: itemId),
+            // TOMBOL KHUSUS PEMBUAT LAPORAN: TANDAI DITEMUKAN
+            if (isOwner && isLost)
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    if (itemId.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('ID laporan tidak ditemukan')),
+                      );
+                      return;
+                    }
+
+                    await FirebaseFirestore.instance
+                        .collection('reports')
+                        .doc(itemId)
+                        .update({
+                      'type': 'Barang Ditemukan',
+                      'foundAt': FieldValue.serverTimestamp(),
+                    });
+
+                    AppLogger.info('REPORT', 'Laporan $itemId ditandai Ditemukan');
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Status diubah menjadi Ditemukan. Laporan otomatis hilang dalam 30 menit.',
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    }
+                  },
+                  icon: const Icon(Icons.check_circle, color: Colors.white),
+                  label: const Text(
+                    'TANDAI SUDAH DITEMUKAN',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
-                  );
-                },
-                icon: const Icon(Icons.verified, color: Colors.white),
-                label: const Text(
-                  'AJUKAN KLAIM / BOOKING BARANG',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
                   ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPlaceholderImage() {
-    return const Column(
+  Widget _buildPlaceholderImage(bool isDark) {
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-        SizedBox(height: 8),
-        Text('Tidak Ada Gambar', style: TextStyle(color: Colors.grey)),
+        Icon(Icons.image_not_supported, size: 50, color: isDark ? Colors.grey[400] : Colors.grey),
+        const SizedBox(height: 8),
+        Text('Tidak Ada Gambar', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey)),
       ],
     );
   }
