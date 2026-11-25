@@ -1,0 +1,30 @@
+name: LoFo CI/CD Pipeline (P11)
+
+on:
+  push:
+    branches: [ "main", "v1.0_dev", "V1.1" ]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Jalankan 200 Unit Tests
+        run: flutter test
+
+      - name: Auto Build APK (Berjalan hanya jika semua UT Hijau)
+        run: flutter build apk --release
+
+      - name: Upload Artifact APK (Siap Deploy/Testing)
+        uses: actions/upload-artifact@v4
+        with:
+          name: lofo-app-release
+          path: build/app/outputs/flutter-apk/app-release.apk
