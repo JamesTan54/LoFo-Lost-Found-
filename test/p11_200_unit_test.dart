@@ -4,7 +4,7 @@ import 'package:lofo_lost_found/services/app_logger.dart';
 
 void main() {
   // Sudah diset ke false (bug diperbaiki) agar seluruh 200 Unit Test Hijau
-  const bool simulateBugFailure = true;
+  const bool simulateBugFailure = false;
 
   group('P11 - 200 Unit Tests Suite (LoFo)', () {
     // 1. 60 Test Validasi Nama
